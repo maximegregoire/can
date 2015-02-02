@@ -6,6 +6,16 @@ char rssi[2];
 int bluetoothTx = 2;  // TX-O pin of bluetooth mate, Arduino D2
 int bluetoothRx = 3;  // RX-I pin of bluetooth mate, Arduino D3
 
+const char END_SEQUENCE[] = "Inquiry Done";
+const byte END_SEQUENCE_CHAR_COUNT = 12;
+const char ERROR_SEQUENCE[] = "ERR";
+const unsigned long TIMEOUT = 13000;
+
+boolean requestSignals;
+int endSequenceCount;
+int bufferIndex;
+unsigned long requestTime;
+
 SoftwareSerial bluetooth(bluetoothTx, bluetoothRx);
 
 
@@ -27,7 +37,23 @@ void setup()
   // 115200 can be too fast at times for NewSoftSerial to relay the data reliably
   bluetooth.begin(9600);  // Start bluetooth serial at 9600
   bluetooth.print("$$$");
+  requestSignals = true;
   delay(500);
+}
+
+void getMAC()
+{
+  for (int i = 0; i < 12; i++)
+  {
+    deviceMAC[i] = buffer[25+i];
+  }
+}
+
+void parseBuffer()
+{
+  getMAC();
+  
+  deviceMAC
 }
 
 void clearAll()
@@ -39,14 +65,70 @@ void clearAll()
   
   for(int i = 0; i<200; i++)
   {
-    buffer[i] = ' ';
+    buffer[i] = '\0';
   }
 }
 
 void loop()
 { 
-  bluetooth.println("IQ2"); 
-  int i = 0;
+  if (requestSignals)
+  {
+    Serial.println("Sending IQ2 signals");
+    bluetooth.println("IQ2"); 
+    requestTime = millis();
+    bufferIndex = 0;
+    requestSignals = false;
+    endSequenceCount = 0;
+  }
+  
+  if(bluetooth.available())  // If the bluetooth sent any characters
+  {
+    buffer[bufferIndex] = (char)bluetooth.read();
+    Serial.print(buffer[bufferIndex]);
+    
+    // Check for error
+    if (bufferIndex >= 2 && buffer[bufferIndex] == 'R' 
+        && buffer[1] == 'R' && buffer[0] == 'E')
+    {
+       Serial.println("ERROR MUST ABORT");
+       setup();
+    }
+    
+    // Check for end sequence
+    if (buffer[bufferIndex] == END_SEQUENCE[endSequenceCount])
+    {
+      //Serial.print("Compare success # ");
+      //Serial.println(bufferIndex);
+      if(endSequenceCount == END_SEQUENCE_CHAR_COUNT - 1)
+      {
+        //TODO finish
+        parseBuffer();
+        Serial.println("END SEQUENCE FOUND");
+        requestSignals = true;
+      }
+      
+      endSequenceCount++;
+    }
+    else
+    {
+      endSequenceCount = 0;
+    }
+    
+    bufferIndex++;
+  }
+  else
+  {
+    if (millis() - requestTime == TIMEOUT)
+    {
+      Serial.println("Timeout");
+      requestSignals = true;
+    }
+  }
+  
+  
+  
+  
+  
 //  delay(1000);
 //  while(bluetooth.available())
 //  {
@@ -55,21 +137,21 @@ void loop()
 //    i++;
 //  }
   
-  delay(4000);
-  Serial.print("available = ");
-  Serial.println(bluetooth.available());
-  
-  while(bluetooth.available() != 0)
-  {
-    while(bluetooth.available() != 0)
-    {
-      buffer[i] = (char)bluetooth.read();
-      i++;
-    }
-    delay(1000);
-  }
-  
-  Serial.println(buffer);
+//  delay(4000);
+//  Serial.print("available = ");
+//  Serial.println(bluetooth.available());
+//  
+//  while(bluetooth.available() != 0)
+//  {
+//    while(bluetooth.available() != 0)
+//    {
+//      buffer[i] = (char)bluetooth.read();
+//      i++;
+//    }
+//    delay(100);
+//  }
+//  
+//  Serial.println(buffer);
   
 //  // 64 maximum buffer capacity
 //  if(bluetooth.available() == 63)
@@ -182,6 +264,6 @@ void loop()
 //  }
   
     
-  clearAll();
+  //clearAll();
 }
 

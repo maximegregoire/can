@@ -1,7 +1,6 @@
 #include <SoftwareSerial.h>  
 char buffer[300];
 char deviceMAC[12];
-char rssi[2];
 
 int bluetoothTx = 2;  // TX-O pin of bluetooth mate, Arduino D2
 int bluetoothRx = 3;  // RX-I pin of bluetooth mate, Arduino D3
@@ -41,19 +40,60 @@ void setup()
   delay(500);
 }
 
-void getMAC()
+void getMAC(int index)
 {
   for (int i = 0; i < 12; i++)
   {
-    deviceMAC[i] = buffer[25+i];
+    deviceMAC[i] = buffer[index+i];
   }
 }
 
 void parseBuffer()
 {
-  getMAC();
+  byte comasAmount = 0;
+  byte indexBuffer = 19;
+  byte numberOfDevices = -1;
+  while(numberOfDevices < 0 || numberOfDevices > 9)
+  {
+    numberOfDevices = buffer[indexBuffer] - '0';
+    indexBuffer++;
+  }
   
-  deviceMAC
+    
+  //Serial.print("NUMBER OF DEVICES = ");
+  //Serial.println(numberOfDevices);
+    
+  indexBuffer = indexBuffer + 2;
+  int rssiNum;
+  for(int deviceIndex = 0; deviceIndex < numberOfDevices; deviceIndex++)
+  {
+    rssiNum = 0;
+    comasAmount = 0;
+    getMAC(indexBuffer);
+    Serial.print("MAC ADDRESS = ");
+    Serial.println(deviceMAC);
+    
+    // Look for 3 comas
+    while(comasAmount != 3)
+    {
+      indexBuffer++;
+      if (buffer[indexBuffer] == ',')
+      {
+        comasAmount++;
+      }
+    }
+    
+    // Get RSSI
+    indexBuffer = indexBuffer + 2;
+    //Serial.println("");
+    //Serial.println(buffer[indexBuffer]);
+    rssiNum = ((buffer[indexBuffer]-'0')*10) + (buffer[indexBuffer + 1]-'0');
+    Serial.print("RSSI = ");
+    Serial.println(rssiNum);
+    
+    // Put buffer to next line
+    indexBuffer = indexBuffer + 4;
+  }
 }
 
 void clearAll()
@@ -84,11 +124,11 @@ void loop()
   if(bluetooth.available())  // If the bluetooth sent any characters
   {
     buffer[bufferIndex] = (char)bluetooth.read();
-    Serial.print(buffer[bufferIndex]);
+    //Serial.print(buffer[bufferIndex]);
     
     // Check for error
-    if (bufferIndex >= 2 && buffer[bufferIndex] == 'R' 
-        && buffer[1] == 'R' && buffer[0] == 'E')
+    if ((bufferIndex >= 2 && buffer[bufferIndex] == 'R' 
+        && buffer[1] == 'R' && buffer[0] == 'E'))
     {
        Serial.println("ERROR MUST ABORT");
        setup();
@@ -103,7 +143,8 @@ void loop()
       {
         //TODO finish
         parseBuffer();
-        Serial.println("END SEQUENCE FOUND");
+        //Serial.println("END SEQUENCE FOUND");
+        clearAll();
         requestSignals = true;
       }
       
@@ -124,146 +165,5 @@ void loop()
       requestSignals = true;
     }
   }
-  
-  
-  
-  
-  
-//  delay(1000);
-//  while(bluetooth.available())
-//  {
-//    buffer[i] = (char)bluetooth.read();
-//    
-//    i++;
-//  }
-  
-//  delay(4000);
-//  Serial.print("available = ");
-//  Serial.println(bluetooth.available());
-//  
-//  while(bluetooth.available() != 0)
-//  {
-//    while(bluetooth.available() != 0)
-//    {
-//      buffer[i] = (char)bluetooth.read();
-//      i++;
-//    }
-//    delay(100);
-//  }
-//  
-//  Serial.println(buffer);
-  
-//  // 64 maximum buffer capacity
-//  if(bluetooth.available() == 63)
-//  {
-//    while(i!=63)
-//    {
-//      buffer[i] = (char)bluetooth.read();
-//      i++;
-//    }
-//  }
-//  
-//  Serial.println(buffer);
-//  
-//  delay(100);
-//  
-//  Serial.print("after 1st buffer emptied = ");
-//  Serial.println(bluetooth.available());
-  
-//  while(bluetooth.available())
-//  {
-//    buffer[i] = (char)bluetooth.read();
-//    //if (i == 25) break;
-//    if (i ==63) break;
-//    i++;
-//  }
-//  delay(1500);
-//  
-//  while(bluetooth.available())
-//  {
-//    buffer[i] = (char)bluetooth.read();
-//    //if (i == 25) break;
-//    if (i ==63+64) break;
-//    i++;
-//  }
-//  
-//  delay(500);
-//  
-//  while(bluetooth.available())
-//  {
-//    buffer[i] = (char)bluetooth.read();
-//    //if (i == 25) break;
-//    if (i ==63+128) break;
-//    i++;
-//  }
-//  
-//  Serial.println(buffer);
-  
-  
-  
-  
-  
-  
-  
-//  if (buffer[25] >= '1' && buffer[25] <= '9')
-//  {
-//    int number = buffer[25] - '0'; // Char-to-digit conversion
-//    
-//    // Devices found
-//    if (number > 0)
-//    {
-//      // Skip 2 chars (space and newline)
-//      bluetooth.read();
-//      bluetooth.read();
-//      
-//      Serial.print(number);
-//      Serial.println(" devices");
-//      
-//      // Go through devices' info
-//      for (int j = 0; j < number; j++)
-//      {
-//        i = 0;
-//        
-//        // MAC Address
-//        while(bluetooth.available())
-//        {
-//          deviceMAC[i] = (char)bluetooth.read();
-//          if (i == 11) break;
-//          i++;
-//        }
-//        
-//        // Skip 17 characters
-//        for (i = 0; i < 17; i++)
-//        {
-//          bluetooth.read();
-//        }
-//        
-//        // Signal strength, smaller is closer
-//        i = 0;
-//        while(bluetooth.available())
-//        {
-//          rssi[i] = (char)bluetooth.read();
-//          if (i == 1) break;
-//          i++;
-//        }
-//        
-//        if (rssi[0] >= '1' && rssi[0] <= '9' && rssi[1] >= '1' && rssi[1] <= '9')
-//        {
-//          // string to int conversion [10 to 99]
-//          int rssiNum = ((rssi[0]-'0')*10) + (rssi[1]-'0');
-//          Serial.print(deviceMAC);
-//          Serial.print(" => ");
-//          Serial.println(rssiNum);
-//          
-//          //TODO send through ethernet
-//        }
-//        
-//        bluetooth.read();
-//      }
-//    }
-//  }
-  
-    
-  //clearAll();
 }
 

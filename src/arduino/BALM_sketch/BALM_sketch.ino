@@ -1,22 +1,33 @@
 #include <SoftwareSerial.h>  
-char buffer[300];
-char deviceMAC[12];
+#include <SPI.h>
+#include <Ethernet.h>
 
+// Pins map
 int bluetoothTx = 2;  // TX-O pin of bluetooth mate, Arduino D2
 int bluetoothRx = 3;  // RX-I pin of bluetooth mate, Arduino D3
 
+// Constant values
 const char END_SEQUENCE[] = "Inquiry Done";
 const byte END_SEQUENCE_CHAR_COUNT = 12;
+const char NO_DEVICE_SEQUENCE[] = "No Devices Found";
+const byte NO_DEVICE_SEQUENCE_CHAR_COUNT = 16;
 const char ERROR_SEQUENCE[] = "ERR";
-const unsigned long TIMEOUT = 13000;
+const unsigned long TIMEOUT = 13000; //ms
+byte MAC[] = { 0x90, 0xA2, 0xDA, 0x0F, 0x88, 0x6D };
 
+// Global variables
+char buffer[300];
+char deviceMAC[12];
 boolean requestSignals;
 int endSequenceCount;
+int noDeviceSequenceCount;
 int bufferIndex;
 unsigned long requestTime;
 
+// Global objects
 SoftwareSerial bluetooth(bluetoothTx, bluetoothRx);
-
+EthernetClient client;
+IPAddress IP(192,168,0,177); //fallback if DHCP fails
 
 void setup()
 {
@@ -37,7 +48,17 @@ void setup()
   bluetooth.begin(9600);  // Start bluetooth serial at 9600
   bluetooth.print("$$$");
   requestSignals = true;
-  delay(500);
+  
+  // IP assignation try
+  if (Ethernet.begin(MAC) == 0) 
+  {
+    delay(10000);
+    Serial.println("Failed to configure Ethernet using DHCP");
+    Ethernet.begin(MAC, IP);
+  }
+  
+  
+  delay(1000);
 }
 
 void getMAC(int index)
@@ -119,12 +140,13 @@ void loop()
     bufferIndex = 0;
     requestSignals = false;
     endSequenceCount = 0;
+    noDeviceSequenceCount = 0;
   }
   
   if(bluetooth.available())  // If the bluetooth sent any characters
   {
     buffer[bufferIndex] = (char)bluetooth.read();
-    //Serial.print(buffer[bufferIndex]);
+    Serial.print(buffer[bufferIndex]);
     
     // Check for error
     if ((bufferIndex >= 2 && buffer[bufferIndex] == 'R' 
@@ -133,6 +155,24 @@ void loop()
        Serial.println("ERROR MUST ABORT");
        setup();
     }
+    
+    // Check for no device found
+    if (buffer[bufferIndex] == NO_DEVICE_SEQUENCE[noDeviceSequenceCount])
+    {
+      if(noDeviceSequenceCount == NO_DEVICE_SEQUENCE_CHAR_COUNT - 1)
+      {
+        Serial.print("NO DEVICE FOUND OMG");
+        clearAll();
+        requestSignals = true;
+      }
+      
+      noDeviceSequenceCount++;
+    }
+    else
+    {
+      noDeviceSequenceCount = 0;
+    }
+    
     
     // Check for end sequence
     if (buffer[bufferIndex] == END_SEQUENCE[endSequenceCount])

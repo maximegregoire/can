@@ -3,14 +3,14 @@ package ds;
 import java.util.ArrayList;
 
 public enum Response {
-	AccessGranted ("g"),
-	AccessDenied ("d"),
-	ManualAccessGranted ("m"),
-	ShowOnMonitor ("s");
+	AccessGranted ('G'),
+	AccessDenied ('D'),
+	ManualAccessGranted ('M'),
+	ShowOnMonitor ('s');
 	
-	public final String command;
+	public final char command;
 	
-	Response(String command)
+	Response(char command)
 	{
 		this.command = command;
 	}

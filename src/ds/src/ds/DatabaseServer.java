@@ -7,18 +7,23 @@ public class DatabaseServer {
 
 	public final static boolean DEBUG = true;
 	
+	public final static String NAME_OF_SERVER = "Door 1";
+	
 	public static void main(String[] args)
-	{
-		String clientSentence = "";
-        String response = "";
-        boolean needResponse;
+	{   
+        PermServerThread pst = new PermServerThread(8889);
+        pst.start();
         
+
+        String response = "";
         ServerSocket serverSocket;
         Socket socket;
+        Bouncer bouncer = new PlainText();
 
         BufferedReader reader;
         String message;
         try {
+     	   System.out.println("TEMP server started");
         	serverSocket = new ServerSocket(8887);
         	
             while(true)
@@ -34,9 +39,13 @@ public class DatabaseServer {
                 	System.out.println("\"" + message + "\" from " + clientIp + ":" + clientPort);
                 }
                 
-                DataOutputStream outToClient = new DataOutputStream(socket.getOutputStream());
-		        outToClient.writeBytes("Some clever response");
-                
+                response = QueryProcessing.ProcessQuery(message, bouncer);
+                if(response != null)
+                {
+	                DataOutputStream outToClient = new DataOutputStream(socket.getOutputStream());
+	                System.out.println("Response = " + response);
+			        outToClient.writeBytes(response);
+                }
 		        
                 reader.close();	
 	            socket.close();

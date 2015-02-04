@@ -2,12 +2,12 @@ package ds;
 
 public enum Query
 {
-	AccessRequest ("a"),
-	ManualAccessRequest ("m");
+	AccessRequest ('A'),
+	ManualAccessRequest ('M');
 	
-	public final String command;
+	public final char command;
 	
-	Query(String command)
+	Query(char command)
 	{
 		this.command = command;
 	}

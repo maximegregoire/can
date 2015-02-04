@@ -7,7 +7,7 @@ int bluetoothTx = 2;  // TX-O pin of bluetooth mate, Arduino D2
 int bluetoothRx = 3;  // RX-I pin of bluetooth mate, Arduino D3
 
 // Constant values
-const int DETECTION_THRESHOLD = 58;
+const int DETECTION_THRESHOLD = 56;
 const char END_SEQUENCE[] = "Inquiry Done";
 const byte END_SEQUENCE_CHAR_COUNT = 12;
 const char NO_DEVICE_SEQUENCE[] = "No Devices Found";
@@ -16,7 +16,11 @@ const char ERROR_SEQUENCE[] = "ERR";
 const unsigned long TIMEOUT = 13000; //ms
 const byte SERVER[] = { 172, 29, 12, 15 };
 const int SERVER_PORT = 8887;
+const int PERM_SERVER_PORT = 8889;
+const int MAXIMUM_UNLOCKED = 9;
+const int TIME_UNLOCKED = 5000; //ms
 byte MAC[] = { 0x90, 0xA2, 0xDA, 0x0F, 0x88, 0x6D };
+
 
 // Global variables
 char buffer[300];
@@ -26,20 +30,14 @@ int endSequenceCount;
 int noDeviceSequenceCount;
 int bufferIndex;
 unsigned long requestTime;
+boolean hasUnlocked;
+unsigned long unlockedTimes[MAXIMUM_UNLOCKED][2];
 
 // Global objects
 SoftwareSerial bluetooth(bluetoothTx, bluetoothRx);
 EthernetClient client;
+EthernetClient permClient;
 IPAddress IP(192,168,0,177); //fallback if DHCP fails
-
-void emptyBuffer()
-{
-  while(bluetooth.available())
-  {
-    bluetooth.read();
-    delay(20);
-  }
-}
 
 void setup()
 {
@@ -70,10 +68,13 @@ void setup()
     Serial.println("Failed to configure Ethernet using DHCP");
     Ethernet.begin(MAC, IP);
   }
+  
   pinMode(9, OUTPUT);
   digitalWrite(9, LOW);
+  hasUnlocked = false;
   
   delay(1000);
+  permClient.connect(SERVER, PERM_SERVER_PORT);
 }
 
 void getMAC(int index)
@@ -84,14 +85,57 @@ void getMAC(int index)
   }
 }
 
+void signalUnlock()
+{
+  digitalWrite(9, HIGH);
+  delay(5000);
+  digitalWrite(9, LOW);
+}
+
+void unlock(unsigned long id)
+{
+//  if (hasUnlocked)
+//  {
+//    for (int i = 0; i < MAXIMUM_UNLOCKED; i++)
+//    {
+//      if (id == unlockedTimes[i][0])
+//      {
+//        if (millis() - unlockedTimes[i][1] > TIME_UNLOCKED)
+//        {
+//          unlockedTimes[i][1] = 0;
+//          signalUnlock();
+//          return;
+//        }
+//      }
+//    }
+//  }
+   
+  
+  signalUnlock(); 
+}
+
+bool strEq(char * str1, char * str2, int count)
+{
+  for (int i = 0; i < count; i++)
+  {
+    if (str1[i] != str2[i])
+    {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
 void sendAccessRequest(int rssi)
 {
   if (rssi <= DETECTION_THRESHOLD)
   {
     if(client.connect(SERVER, SERVER_PORT))
     {
-      client.print("A");
-      client.println(deviceMAC);
+      String command = "A" + String(deviceMAC);
+      client.println(command);
+      
       char response[20];
       byte responseIndex = 0;
       
@@ -107,15 +151,21 @@ void sendAccessRequest(int rssi)
         responseIndex++;
         delay(10);
       }
+      Serial.println("Response: ");
+      Serial.print(response);
       
-      Serial.println(response);
-      
-      digitalWrite(9, HIGH);   // sets the LED on
-      delay(5000);                  // waits for a second
-      digitalWrite(9, LOW);
+      if(response[0] == 'G' && strEq(&response[1], deviceMAC, 12))
+      {
+        Serial.println("UNLOCKING");
+        signalUnlock();
+      }
       
       client.stop();
     }  
+    else
+    {
+      Serial.println("UNABLE TO CONNECT TO SERVER");
+    }
   }
 }
 
@@ -263,6 +313,24 @@ void loop()
   }
   else
   {
+    if(permClient.available())
+    {      
+      char response[20];
+      byte responseIndex = 0;
+      
+      while(permClient.available())
+      {
+        response[responseIndex] = (char)permClient.read();
+        responseIndex++;
+        delay(10);
+      }
+      
+      if (response[0] == 'M')
+      {
+        signalUnlock();
+      }
+    }
+    
     if (millis() - requestTime >= TIMEOUT)
     {
       Serial.println("Timeout");

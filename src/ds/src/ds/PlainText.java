@@ -17,7 +17,7 @@ import java.util.Date;
 
 public class PlainText extends Bouncer {
 
-	String dbPath = "C:\\Users\\Makers-mon\\can\\db";
+	String dbPath = "C:\\Users\\mgregoire\\can\\db";
 	
 	public boolean CanAccess(String macAddress) {
 		
@@ -35,7 +35,7 @@ public class PlainText extends Bouncer {
 			    }
 			    else if (line.length() > 12)
 			    {
-			    	if (line.substring(0, 13).equalsIgnoreCase(macAddress))
+			    	if (line.substring(0, 12).equalsIgnoreCase(macAddress))
 				    	return true;
 			    }
 			}
@@ -87,6 +87,28 @@ public class PlainText extends Bouncer {
 		}
 		
 		return false;
+	}
+	
+	public String WhoIs(String macAddress) 
+	{
+		try {
+			for (String line : Files.readAllLines(Paths.get(dbPath + "\\mydb"))) {
+			    if (line.charAt(0) == '#')
+			    {
+			    	continue;
+			    }
+			    else if (line.length() > 14)
+			    {
+			    	if (line.substring(0, 12).equalsIgnoreCase(macAddress))
+				    	return line.substring(13);
+			    }
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return null;
 	}
 
 }

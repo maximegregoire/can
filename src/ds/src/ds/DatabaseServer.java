@@ -11,9 +11,24 @@ public class DatabaseServer {
 	
 	public static void main(String[] args)
 	{   
+//		Socket s;
+//		try {
+//			s = new Socket("192.168.146.182",8888);
+//		BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+//		DataOutputStream outToClient = new DataOutputStream(s.getOutputStream());
+//        System.out.println("Response = " + "lol");
+//
+//			outToClient.writeBytes("lol");
+//		} catch (Exception e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+		
+		
         PermServerThread pst = new PermServerThread(8889);
+        AppServerThread app = new AppServerThread(8891);
         pst.start();
-        
+        app.start();
 
         String response = "";
         ServerSocket serverSocket;
@@ -49,6 +64,12 @@ public class DatabaseServer {
 		        
                 reader.close();	
 	            socket.close();
+	            try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
             }
             
             //s.close();

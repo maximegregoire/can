@@ -16,7 +16,9 @@ public class QueryProcessing {
 		case 'A':
 			if (query.length() >= 13 && bouncer.CanAccess(query.substring(1)))
 			{
-				bouncer.Detects(query.substring(1));
+				String mac = query.substring(1);
+				bouncer.Detects(mac);
+				AppServerThread.DisplayIdaps = bouncer.WhoIs(mac);
 				return Response.AccessGranted.command + query.substring(1) + ENDLINE;
 			}
 			else

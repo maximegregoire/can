@@ -19,7 +19,6 @@ public class PermServerThread extends Thread
       SendManualAccess = false;
    }
 
-   @Override
    public void run()
    {
 	   String response = "";
@@ -55,6 +54,13 @@ public class PermServerThread extends Thread
 			       SendManualAccess = false;
 			       //time = System.currentTimeMillis();
         	   }
+        	   
+        	   try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		        
                //reader.close();	
 	           // socket.close();

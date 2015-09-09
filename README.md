@@ -7,6 +7,6 @@ All the entries are logged ([see example](db/C4438F001DF8)).
 
 The code is divided in two parts : 
 * [The Arduino code](src/arduino/ContactlessAccess.ino)
-* [The database solution](src\ds\src\ds)
+* [The database solution](src/ds/src/ds)
 
 Note that the database is not secure at all. This is just used as a proof of concept.
